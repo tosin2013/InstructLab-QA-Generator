@@ -18,14 +18,6 @@ on:
         description: 'Commit ID to checkout'
         required: true
         default: '83d9852ad97c6b27d4b24508f7cfe7ff5dd04d0d'
-      patterns:
-        description: 'File patterns to include'
-        required: true
-        default: 'README.md,**/*.md,**/*.txt,**/*.yaml'
-      yaml_path:
-        description: 'Path for the output YAML file'
-        required: true
-        default: 'output.yaml'
       max_files:
         description: 'Maximum number of files to read'
         required: true
