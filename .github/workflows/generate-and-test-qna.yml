@@ -64,7 +64,7 @@ jobs:
 
     - name: Run QnA Generation Script
       run: |
-        python generate_qna.py
+        python generate_project_qa.py
       env:
         PROJECT_NAME: ${{ github.event.inputs.project_name }}
         REPO_URL: ${{ github.event.inputs.repo_url }}
