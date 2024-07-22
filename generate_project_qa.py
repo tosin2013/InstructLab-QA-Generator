@@ -5,6 +5,7 @@ import glob
 import logging
 from transformers import pipeline
 from nltk.tokenize import sent_tokenize, blankline_tokenize
+import argparse
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -140,15 +141,34 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, max_fi
     logging.info(f"YAML file generated at: {yaml_path}")
 
 # Main script
-project_name = 'InstructLab'  # Change this to the name of your project
-repo_url = 'https://github.com/instructlab/.github'
-commit_id = '83d9852ad97c6b27d4b24508f7cfe7ff5dd04d0d'
-patterns = ['README.md', '**/*.md', '**/*.txt', '**/*.yaml']
-yaml_path = 'qna.yaml'
-max_files = 100  # Maximum number of files to read
-max_lines = 2000  # Maximum number of lines to read from each file
-keywords = ['InstructLab', 'getting started', 'problems', 'created', 'collaboration', 'open source', 'tuning method', 'mission']  # Keywords to search for relevant sections
-min_sentence_length = 10  # Minimum number of words in the answer
-min_answers = 5  # Minimum number of valid answers required
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generate QnA YAML from a Git repository.")
+    parser.add_argument('--project_name', type=str, default=os.getenv('PROJECT_NAME', 'InstructLab'), help='Project name')
+    parser.add_argument('--repo_url', type=str, default=os.getenv('REPO_URL', 'https://github.com/instructlab/.github'), help='Repository URL')
+    parser.add_argument('--commit_id', type=str, default=os.getenv('COMMIT_ID', '83d9852ad97c6b27d4b24508f7cfe7ff5dd04d0d'), help='Commit ID')
+    parser.add_argument('--patterns', type=str, default=os.getenv('PATTERNS', 'README.md,**/*.md,**/*.txt,**/*.yaml'), help='File patterns to include')
+    parser.add_argument('--yaml_path', type=str, default=os.getenv('YAML_PATH', 'qna.yaml'), help='Path to save the YAML file')
+    parser.add_argument('--max_files', type=int, default=int(os.getenv('MAX_FILES', 100)), help='Maximum number of files to read')
+    parser.add_argument('--max_lines', type=int, default=int(os.getenv('MAX_LINES', 2000)), help='Maximum number of lines to read from each file')
+    parser.add_argument('--keywords', type=str, default=os.getenv('KEYWORDS', 'InstructLab,getting started,problems,created,collaboration,open source,tuning method,mission'), help='Keywords to search for relevant sections')
+    parser.add_argument('--min_sentence_length', type=int, default=int(os.getenv('MIN_SENTENCE_LENGTH', 10)), help='Minimum number of words in the answer')
+    parser.add_argument('--min_answers', type=int, default=int(os.getenv('MIN_ANSWERS', 5)), help='Minimum number of valid answers required')
 
-generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, max_files, max_lines, keywords, min_sentence_length, min_answers)
+    args = parser.parse_args()
+    
+    # Convert comma-separated patterns and keywords to list
+    patterns = args.patterns.split(',')
+    keywords = args.keywords.split(',')
+
+    generate_yaml(
+        repo_url=args.repo_url,
+        commit_id=args.commit_id,
+        patterns=patterns,
+        yaml_path=args.yaml_path,
+        project_name=args.project_name,
+        max_files=args.max_files,
+        max_lines=args.max_lines,
+        keywords=keywords,
+        min_sentence_length=args.min_sentence_length,
+        min_answers=args.min_answers
+    )
