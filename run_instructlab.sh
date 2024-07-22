@@ -7,7 +7,7 @@ cd ~/instructlab
 source venv/bin/activate
 
 # Install the command line tool using pip
-pip3 install git+https://github.com/instructlab/instructlab.git@v0.16.1
+pip3 install git+https://github.com/instructlab/instructlab.git@v0.17.1
 
 # Verify ilab is installed correctly
 ilab
