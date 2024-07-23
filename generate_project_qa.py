@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # Function to read the Git repository
 def read_git_repo(repo_url, commit_id, patterns, max_files):
-    repo_dir = "/tmp/repo"  # Temporary directory to clone the repo
+    repo_dir = "/tmp/repo-github"  # Temporary directory to clone the repo
     if os.path.exists(repo_dir):
         os.system(f"rm -rf {repo_dir}")
 
