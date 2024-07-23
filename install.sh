@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# curl -OL https://gist.githubusercontent.com/tosin2013/695835751174d725ac196582f3822137/raw/d12cd0fb7960d9928f6c83d9364973e1cd7572ce/configure-rhel9.x.sh
+# chmod +x configure-rhel9.x.sh
+# ./configure-rhel9.x.sh
+
 # Update the system
 sudo yum update -y
 
