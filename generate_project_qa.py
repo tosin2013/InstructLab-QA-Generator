@@ -25,6 +25,8 @@ def read_git_repo(repo_url, commit_id, patterns, max_files):
     for pattern in patterns:
         file_paths = glob.glob(os.path.join(repo_dir, pattern), recursive=True)
         for file_path in file_paths:
+            if os.path.isdir(file_path):
+                continue  # Skip directories
             if file_count >= max_files:
                 break
             with open(file_path, 'r') as file:
