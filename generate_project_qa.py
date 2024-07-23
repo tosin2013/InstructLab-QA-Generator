@@ -95,7 +95,7 @@ def generate_qa_pairs(sections, project_name, min_sentence_length):
         if best_answer.strip() and len(best_answer.split()) >= min_sentence_length:
             seed_examples.append({'question': question, 'answer': best_answer.strip()})
         else:
-            logging.warning(f"Skipped question '{question}' due to insufficient answer length.")
+            logging.warning(f"Skipped question '{question}' due to insufficient answer length. Answer: '{best_answer}', Length: {len(best_answer.split())}")
 
     return seed_examples
 
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     parser.add_argument('--max_files', type=int, default=int(os.getenv('MAX_FILES', 100)), help='Maximum number of files to read')
     parser.add_argument('--max_lines', type=int, default=int(os.getenv('MAX_LINES', 2000)), help='Maximum number of lines to read from each file')
     parser.add_argument('--keywords', type=str, default=os.getenv('KEYWORDS', 'InstructLab,getting started,problems,created,collaboration,open source,tuning method,mission'), help='Keywords to search for relevant sections')
-    parser.add_argument('--min_sentence_length', type=int, default=int(os.getenv('MIN_SENTENCE_LENGTH', 10)), help='Minimum number of words in the answer')
+    parser.add_argument('--min_sentence_length', type=int, default=int(os.getenv('MIN_SENTENCE_LENGTH', 5)), help='Minimum number of words in the answer')
     parser.add_argument('--min_answers', type=int, default=int(os.getenv('MIN_ANSWERS', 5)), help='Minimum number of valid answers required')
 
     args = parser.parse_args()
