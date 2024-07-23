@@ -2,3 +2,4 @@ gitpython
 pyyaml
 transformers
 nltk
+pip-tools
