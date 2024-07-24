@@ -2,43 +2,6 @@ name: Generate QnA YAML and Serve Model
 
 on:
   workflow_dispatch:
-    inputs:
-      project_name:
-        description: 'Name of the project'
-        required: true
-        default: 'InstructLab'
-      repo_url:
-        description: 'GitHub repository URL'
-        required: true
-        default: 'https://github.com/instructlab/.github'
-      commit_id:
-        description: 'Commit ID to checkout'
-        required: true
-        default: '83d9852ad97c6b27d4b24508f7cfe7ff5dd04d0d'
-      max_files:
-        description: 'Maximum number of files to read'
-        required: true
-        default: 100
-      max_lines:
-        description: 'Maximum number of lines to read from each file'
-        required: true
-        default: 2000
-      keywords:
-        description: 'Keywords to search for relevant sections'
-        required: true
-        default: 'InstructLab,getting started,problems,created,collaboration,open source,tuning method,mission'
-      min_sentence_length:
-        description: 'Minimum number of words in the answer'
-        required: true
-        default: 10
-      min_answers:
-        description: 'Minimum number of valid answers required'
-        required: true
-        default: 5
-      num_instructions:
-        description: 'Number of instructions to generate'
-        required: true
-        default: 100
 
 jobs:
   generate_qna:
@@ -61,18 +24,7 @@ jobs:
 
     - name: Run QnA Generation Script
       run: |
-        python generate_project_qa.py
-      env:
-        PROJECT_NAME: ${{ github.event.inputs.project_name }}
-        REPO_URL: ${{ github.event.inputs.repo_url }}
-        COMMIT_ID: ${{ github.event.inputs.commit_id }}
-        PATTERNS: ${{ github.event.inputs.patterns }}
-        YAML_PATH: ${{ github.event.inputs.yaml_path }}
-        MAX_FILES: ${{ github.event.inputs.max_files }}
-        MAX_LINES: ${{ github.event.inputs.max_lines }}
-        KEYWORDS: ${{ github.event.inputs.keywords }}
-        MIN_SENTENCE_LENGTH: ${{ github.event.inputs.min_sentence_length }}
-        MIN_ANSWERS: ${{ github.event.inputs.min_answers }}
+        python generate_project_qa.py --config_path config.yaml
 
     - name: Initialize ilab
       run: |
