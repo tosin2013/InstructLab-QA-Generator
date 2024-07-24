@@ -53,6 +53,7 @@ def extract_relevant_sections(text, keywords):
             if keyword.lower() in paragraph.lower():
                 sections.append(paragraph)
                 break
+    logging.info(f"Extracted {len(sections)} relevant sections")
     return sections
 
 # Function to combine relevant sections for better context
@@ -70,23 +71,52 @@ def combine_relevant_sections(sections):
     return combined_sections
 
 # Function to generate questions and answers using specified models
-def generate_qa_pairs(sections, project_name, questions, min_sentence_length):
-    question_answerer = pipeline("question-answering", model="deepset/roberta-base-squad2")
+def generate_qa_pairs(sections, project_name, questions, min_sentence_length, model_name):
+    """
+    Generate question-answer pairs from the provided text sections.
 
+    Args:
+        sections (list of str): List of text sections to use as context for generating Q&A pairs.
+        project_name (str): Name of the project for which Q&A pairs are being generated.
+        questions (list of str): List of question templates to generate Q&A pairs.
+        min_sentence_length (int): Minimum length of the answer in terms of number of words.
+        model_name (str): The Huggingface model to use for question answering.
+
+    Returns:
+        list of dict: List of dictionaries containing question and answer pairs.
+    """
+    
+    # Initialize the question-answering pipeline with the specified model
+    question_answerer = pipeline("question-answering", model=model_name)
+
+    # List to hold the generated question-answer pairs
     seed_examples = []
+    
+    # Combine all sections to provide a richer context
+    context = " ".join(sections)
+
+    # Iterate through each question template
     for question_template in questions:
+        # Format the question with the project name
         question = question_template.format(project_name=project_name)
         best_answer = ""
         best_score = 0.0
-        for section in sections:
-            try:
-                answer = question_answerer(question=question, context=section)
-                if answer['score'] > best_score and len(answer['answer'].split()) >= min_sentence_length:
-                    best_answer = answer['answer']
-                    best_score = answer['score']
-            except Exception as e:
-                logging.error(f"Error processing question '{question}' with context '{section}': {e}")
-                continue
+
+        try:
+            # Get the answer from the pipeline
+            answer = question_answerer(question=question, context=context)
+            logging.info(f"Processing question '{question}' with context length {len(context)}")
+            logging.info(f"Answer: {answer['answer']} with score {answer['score']}")
+
+            # Update the best answer if it meets the criteria
+            if answer['score'] > best_score and len(answer['answer'].split()) >= min_sentence_length:
+                best_answer = answer['answer']
+                best_score = answer['score']
+        except Exception as e:
+            logging.error(f"Error processing question '{question}' with context '{context}': {e}")
+            continue
+
+        # Add the question-answer pair to the list if the answer is valid
         if best_answer.strip() and len(best_answer.split()) >= min_sentence_length:
             seed_examples.append({'question': question, 'answer': best_answer.strip()})
         else:
@@ -114,7 +144,7 @@ def generate_synthetic_data():
         logging.info("Synthetic data generation completed.")
 
 # Function to generate the YAML file
-def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir):
+def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name):
     logging.info("Starting YAML generation process")
     repo_content = read_git_repo(repo_url, commit_id, patterns, max_files)
     combined_content = ""
@@ -132,7 +162,7 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
     combined_sections = combine_relevant_sections(relevant_sections)
 
     # Generate seed examples from the relevant sections
-    seed_examples = generate_qa_pairs(combined_sections, project_name, questions, min_sentence_length)
+    seed_examples = generate_qa_pairs(combined_sections, project_name, questions, min_sentence_length, model_name)
 
     # Check if the minimum number of answers is met
     if len(seed_examples) < min_answers:
@@ -190,6 +220,7 @@ if __name__ == "__main__":
     min_answers = config['min_answers']
     questions = config['questions']
     taxonomy_dir = config['taxonomy_dir']
+    model_name = config['model_name']
 
     generate_yaml(
         repo_url=repo_url,
@@ -203,5 +234,6 @@ if __name__ == "__main__":
         keywords=keywords,
         min_sentence_length=min_sentence_length,
         min_answers=min_answers,
-        taxonomy_dir=taxonomy_dir
+        taxonomy_dir=taxonomy_dir,
+        model_name=model_name
     )
