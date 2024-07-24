@@ -22,16 +22,16 @@ jobs:
         pip install gitpython pyyaml transformers nltk
         pip install git+https://github.com/instructlab/instructlab.git@v0.17.1
 
-    - name: Run QnA Generation Script
-      run: |
-        python generate_project_qa.py --config_path config.yaml
-
     - name: Initialize ilab
       run: |
         cd ~/instructlab
         python -m venv venv
         source venv/bin/activate
         ilab init
+
+    - name: Run QnA Generation Script
+      run: |
+        python generate_project_qa.py --config_path config.yaml
 
     - name: Download the model
       run: |

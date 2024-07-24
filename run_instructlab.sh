@@ -7,13 +7,16 @@ cd ~/InstructLab-QA-Generator
 source venv/bin/activate
 
 # Verify ilab is installed correctly
-ilab
+#ilab
 
 # Initialize ilab
 ilab init
 
 # Download the model
 ilab download --repository instructlab/granite-7b-lab-GGUF --filename=granite-7b-lab-Q4_K_M.gguf
+
+# Generate Questions Automatically 
+python3 generate_project_qa.py
 
 # Serve the model
 ilab serve --model-path models/granite-7b-lab-Q4_K_M.gguf
