@@ -201,6 +201,7 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate QnA YAML from a Git repository.")
     parser.add_argument('--config_path', type=str, default='config.yaml', help='Path to the configuration file')
+    parser.add_argument('--save_scores', action='store_true', help='Flag to save the scores of the models')
 
     args = parser.parse_args()
 
