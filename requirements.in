@@ -1,5 +1,6 @@
 # GitHub repository dependency
 git+https://github.com/instructlab/instructlab.git@v0.17.1#egg=instructlab
+llama-cpp-python
 gitpython
 pyyaml
 transformers

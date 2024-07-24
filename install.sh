@@ -8,7 +8,8 @@
 sudo yum update -y
 
 # Install necessary dependencies
-sudo yum install -y python3 python3-venv python3-pip git gcc g++
+sudo yum install -y python3 python3-venv python3-pip git gcc g++ gcc-c++
+
 
 # Set the CXX environment variable to the path of the C++ compiler
 export CXX=g++
