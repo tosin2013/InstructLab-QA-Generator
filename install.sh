@@ -13,9 +13,6 @@ sudo yum install -y python3 python3-venv python3-pip git gcc g++
 # Set the CXX environment variable to the path of the C++ compiler
 export CXX=g++
 
-# Set the CXX environment variable to the path of the C++ compiler
-export CXX=g++
-
 # Create a virtual environment
 python3 -m venv venv
 
