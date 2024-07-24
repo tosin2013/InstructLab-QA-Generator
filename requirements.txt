@@ -165,7 +165,9 @@ langchain-text-splitters==0.2.2
 langsmith==0.1.93
     # via langchain-core
 llama-cpp-python[server]==0.2.75
-    # via instructlab
+    # via
+    #   -r requirements.in
+    #   instructlab
 markdown-it-py==3.0.0
     # via rich
 markupsafe==2.1.5
