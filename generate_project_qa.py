@@ -10,6 +10,12 @@ import argparse
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Function to read the configuration file
+def read_config(config_path):
+    with open(config_path, 'r') as file:
+        config = yaml.safe_load(file)
+    return config
+
 # Function to read the Git repository
 def read_git_repo(repo_url, commit_id, patterns, max_files):
     repo_dir = "/tmp/repo"  # Temporary directory to clone the repo
@@ -64,23 +70,12 @@ def combine_relevant_sections(sections):
     return combined_sections
 
 # Function to generate questions and answers using specified models
-def generate_qa_pairs(sections, project_name, min_sentence_length):
+def generate_qa_pairs(sections, project_name, questions, min_sentence_length):
     question_answerer = pipeline("question-answering", model="deepset/roberta-base-squad2")
 
-    # Define some initial questions to simulate the process
-    questions = [
-        f"What is {project_name}?",
-        f"How to get started with {project_name}?",
-        f"What problems is {project_name} aiming to solve?",
-        f"Who created {project_name}?",
-        f"How does {project_name} enable community collaboration?",
-        f"Is {project_name} an open source project?",
-        f"What is the tuning method for {project_name}?",
-        f"What is the mission of {project_name}?"
-    ]
-
     seed_examples = []
-    for question in questions:
+    for question_template in questions:
+        question = question_template.format(project_name=project_name)
         best_answer = ""
         best_score = 0.0
         for section in sections:
@@ -99,8 +94,27 @@ def generate_qa_pairs(sections, project_name, min_sentence_length):
 
     return seed_examples
 
+# Function to validate taxonomy
+def validate_taxonomy():
+    result = os.system("ilab diff")
+    if result != 0:
+        logging.error("Taxonomy validation failed.")
+        raise ValueError("Taxonomy validation failed.")
+    else:
+        logging.info("Taxonomy is valid.")
+
+# Function to generate synthetic data
+def generate_synthetic_data():
+    logging.info("Generating synthetic data...")
+    result = os.system("ilab generate --samples 5")
+    if result != 0:
+        logging.error("Failed to generate synthetic data.")
+        raise ValueError("Failed to generate synthetic data.")
+    else:
+        logging.info("Synthetic data generation completed.")
+
 # Function to generate the YAML file
-def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, max_files, max_lines, keywords, min_sentence_length, min_answers):
+def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers):
     logging.info("Starting YAML generation process")
     repo_content = read_git_repo(repo_url, commit_id, patterns, max_files)
     combined_content = ""
@@ -118,7 +132,7 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, max_fi
     combined_sections = combine_relevant_sections(relevant_sections)
 
     # Generate seed examples from the relevant sections
-    seed_examples = generate_qa_pairs(combined_sections, project_name, min_sentence_length)
+    seed_examples = generate_qa_pairs(combined_sections, project_name, questions, min_sentence_length)
 
     # Check if the minimum number of answers is met
     if len(seed_examples) < min_answers:
@@ -137,10 +151,19 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, max_fi
         }
     }
 
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(yaml_path), exist_ok=True)
+
     with open(yaml_path, 'w') as yaml_file:
         yaml.dump(document_content, yaml_file, default_flow_style=False)
     
     logging.info(f"YAML file generated at: {yaml_path}")
+
+    # Validate taxonomy
+    validate_taxonomy()
+
+    # Generate synthetic data
+    generate_synthetic_data()
 
 # Main script
 if __name__ == "__main__":
@@ -155,6 +178,7 @@ if __name__ == "__main__":
     parser.add_argument('--keywords', type=str, default=os.getenv('KEYWORDS', 'InstructLab,getting started,problems,created,collaboration,open source,tuning method,mission'), help='Keywords to search for relevant sections')
     parser.add_argument('--min_sentence_length', type=int, default=int(os.getenv('MIN_SENTENCE_LENGTH', 5)), help='Minimum number of words in the answer')
     parser.add_argument('--min_answers', type=int, default=int(os.getenv('MIN_ANSWERS', 5)), help='Minimum number of valid answers required')
+    parser.add_argument('--config_path', type=str, default='config_questions.yaml', help='Path to the configuration file with questions')
 
     args = parser.parse_args()
     
@@ -162,12 +186,20 @@ if __name__ == "__main__":
     patterns = args.patterns.split(',')
     keywords = args.keywords.split(',')
 
+    # Read questions from config file
+    config = read_config(args.config_path)
+    questions = config['questions']
+
+    # Define taxonomy path based on project name
+    taxonomy_path = os.path.join(os.getenv('TAXONOMY_DIR', '~/instructlab/taxonomy'), 'knowledge', args.project_name.lower(), 'overview', 'qna.yaml')
+
     generate_yaml(
         repo_url=args.repo_url,
         commit_id=args.commit_id,
         patterns=patterns,
-        yaml_path=args.yaml_path,
+        yaml_path=taxonomy_path,
         project_name=args.project_name,
+        questions=questions,
         max_files=args.max_files,
         max_lines=args.max_lines,
         keywords=keywords,
