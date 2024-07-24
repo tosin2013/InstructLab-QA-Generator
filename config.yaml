@@ -1,0 +1,32 @@
+project_name: InstructLab
+repo_url: https://github.com/instructlab/.github
+commit_id: 83d9852ad97c6b27d4b24508f7cfe7ff5dd04d0d
+patterns: 
+  - README.md
+  - "**/*.md"
+  - "**/*.txt"
+  - "**/*.yaml"
+yaml_path: qna.yaml
+max_files: 100
+max_lines: 2000
+keywords: 
+  - InstructLab
+  - getting started
+  - problems
+  - created
+  - collaboration
+  - open source
+  - tuning method
+  - mission
+min_sentence_length: 5
+min_answers: 5
+questions:
+  - "What is {project_name}?"
+  - "How to get started with {project_name}?"
+  - "What problems is {project_name} aiming to solve?"
+  - "Who created {project_name}?"
+  - "How does {project_name} enable community collaboration?"
+  - "Is {project_name} an open source project?"
+  - "What is the tuning method for {project_name}?"
+  - "What is the mission of {project_name}?"
+taxonomy_dir: "~/instructlab/taxonomy"

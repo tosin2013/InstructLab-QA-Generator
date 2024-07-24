@@ -114,7 +114,7 @@ def generate_synthetic_data():
         logging.info("Synthetic data generation completed.")
 
 # Function to generate the YAML file
-def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers):
+def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir):
     logging.info("Starting YAML generation process")
     repo_content = read_git_repo(repo_url, commit_id, patterns, max_files)
     combined_content = ""
@@ -151,58 +151,57 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
         }
     }
 
-    # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(yaml_path), exist_ok=True)
+    # Define taxonomy path based on project name
+    taxonomy_path = os.path.join(taxonomy_dir, 'knowledge', project_name.lower(), 'overview')
+    os.makedirs(taxonomy_path, exist_ok=True)
+    yaml_file_path = os.path.join(taxonomy_path, yaml_path)
 
-    with open(yaml_path, 'w') as yaml_file:
+    with open(yaml_file_path, 'w') as yaml_file:
         yaml.dump(document_content, yaml_file, default_flow_style=False)
     
-    logging.info(f"YAML file generated at: {yaml_path}")
+    logging.info(f"YAML file generated at: {yaml_file_path}")
 
     # Validate taxonomy
     validate_taxonomy()
 
     # Generate synthetic data
-    #generate_synthetic_data()
+    # generate_synthetic_data()
 
 # Main script
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate QnA YAML from a Git repository.")
-    parser.add_argument('--project_name', type=str, default=os.getenv('PROJECT_NAME', 'InstructLab'), help='Project name')
-    parser.add_argument('--repo_url', type=str, default=os.getenv('REPO_URL', 'https://github.com/instructlab/.github'), help='Repository URL')
-    parser.add_argument('--commit_id', type=str, default=os.getenv('COMMIT_ID', '83d9852ad97c6b27d4b24508f7cfe7ff5dd04d0d'), help='Commit ID')
-    parser.add_argument('--patterns', type=str, default=os.getenv('PATTERNS', 'README.md,**/*.md,**/*.txt,**/*.yaml'), help='File patterns to include')
-    parser.add_argument('--yaml_path', type=str, default=os.getenv('YAML_PATH', 'qna.yaml'), help='Path to save the YAML file')
-    parser.add_argument('--max_files', type=int, default=int(os.getenv('MAX_FILES', 100)), help='Maximum number of files to read')
-    parser.add_argument('--max_lines', type=int, default=int(os.getenv('MAX_LINES', 2000)), help='Maximum number of lines to read from each file')
-    parser.add_argument('--keywords', type=str, default=os.getenv('KEYWORDS', 'InstructLab,getting started,problems,created,collaboration,open source,tuning method,mission'), help='Keywords to search for relevant sections')
-    parser.add_argument('--min_sentence_length', type=int, default=int(os.getenv('MIN_SENTENCE_LENGTH', 5)), help='Minimum number of words in the answer')
-    parser.add_argument('--min_answers', type=int, default=int(os.getenv('MIN_ANSWERS', 5)), help='Minimum number of valid answers required')
-    parser.add_argument('--config_path', type=str, default='config_questions.yaml', help='Path to the configuration file with questions')
+    parser.add_argument('--config_path', type=str, default='config.yaml', help='Path to the configuration file')
 
     args = parser.parse_args()
-    
-    # Convert comma-separated patterns and keywords to list
-    patterns = args.patterns.split(',')
-    keywords = args.keywords.split(',')
 
-    # Read questions from config file
+    # Read configuration
     config = read_config(args.config_path)
-    questions = config['questions']
 
-    # Define taxonomy path based on project name
-    taxonomy_path = os.path.join(os.getenv('TAXONOMY_DIR', '~/instructlab/taxonomy'), 'knowledge', args.project_name.lower(), 'overview', 'qna.yaml')
+    # Extract parameters from the configuration
+    project_name = config['project_name']
+    repo_url = config['repo_url']
+    commit_id = config['commit_id']
+    patterns = config['patterns']
+    yaml_path = config['yaml_path']
+    max_files = config['max_files']
+    max_lines = config['max_lines']
+    keywords = config['keywords']
+    min_sentence_length = config['min_sentence_length']
+    min_answers = config['min_answers']
+    questions = config['questions']
+    taxonomy_dir = config['taxonomy_dir']
 
     generate_yaml(
-        repo_url=args.repo_url,
-        commit_id=args.commit_id,
+        repo_url=repo_url,
+        commit_id=commit_id,
         patterns=patterns,
-        yaml_path=taxonomy_path,
-        project_name=args.project_name,
+        yaml_path=yaml_path,
+        project_name=project_name,
         questions=questions,
-        max_files=args.max_files,
-        max_lines=args.max_lines,
+        max_files=max_files,
+        max_lines=max_lines,
         keywords=keywords,
-        min_sentence_length=args.min_sentence_length,
-        min_answers=args.min_answers
+        min_sentence_length=min_sentence_length,
+        min_answers=min_answers,
+        taxonomy_dir=taxonomy_dir
     )
