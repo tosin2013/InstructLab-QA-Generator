@@ -30,3 +30,14 @@ questions:
   - "What is the tuning method for {project_name}?"
   - "What is the mission of {project_name}?"
 taxonomy_dir: "~/instructlab/taxonomy"
+model_name: "deepset/roberta-base-squad2"  # Model to use for question answering
+
+# Available models:
+# - "deepset/roberta-base-squad2"
+# - "bert-large-uncased-whole-word-masking-finetuned-squad"
+# - "distilbert-base-cased-distilled-squad"
+# - "albert-base-v2"
+# - "t5-base"
+# 
+# To find more models, visit https://huggingface.co/models
+# https://huggingface.co/models?pipeline_tag=question-answering
