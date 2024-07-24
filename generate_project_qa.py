@@ -6,6 +6,7 @@ import logging
 from transformers import pipeline
 from nltk.tokenize import sent_tokenize, blankline_tokenize
 import argparse
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -91,6 +92,7 @@ def generate_qa_pairs(sections, project_name, questions, min_sentence_length, mo
 
     # List to hold the generated question-answer pairs
     seed_examples = []
+    scores = []
     
     # Combine all sections to provide a richer context
     context = " ".join(sections)
@@ -119,10 +121,18 @@ def generate_qa_pairs(sections, project_name, questions, min_sentence_length, mo
         # Add the question-answer pair to the list if the answer is valid
         if best_answer.strip() and len(best_answer.split()) >= min_sentence_length:
             seed_examples.append({'question': question, 'answer': best_answer.strip()})
+            scores.append({'question': question, 'answer': best_answer.strip(), 'score': best_score})
         else:
             logging.warning(f"Skipped question '{question}' due to insufficient answer length. Answer: '{best_answer}', Length: {len(best_answer.split())}")
 
-    return seed_examples
+    return seed_examples, scores
+
+# Function to save scores to CSV
+def save_scores_to_csv(scores, model_name):
+    df = pd.DataFrame(scores)
+    csv_path = f'scores_{model_name.replace("/", "_")}.csv'
+    df.to_csv(csv_path, index=False)
+    logging.info(f"Scores saved to {csv_path}")
 
 # Function to validate taxonomy
 def validate_taxonomy():
@@ -144,7 +154,7 @@ def generate_synthetic_data():
         logging.info("Synthetic data generation completed.")
 
 # Function to generate the YAML file
-def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name):
+def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name, save_scores):
     logging.info("Starting YAML generation process")
     repo_content = read_git_repo(repo_url, commit_id, patterns, max_files)
     combined_content = ""
@@ -162,7 +172,7 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
     combined_sections = combine_relevant_sections(relevant_sections)
 
     # Generate seed examples from the relevant sections
-    seed_examples = generate_qa_pairs(combined_sections, project_name, questions, min_sentence_length, model_name)
+    seed_examples, scores = generate_qa_pairs(combined_sections, project_name, questions, min_sentence_length, model_name)
 
     # Check if the minimum number of answers is met
     if len(seed_examples) < min_answers:
@@ -190,6 +200,10 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
         yaml.dump(document_content, yaml_file, default_flow_style=False)
     
     logging.info(f"YAML file generated at: {yaml_file_path}")
+
+    # Save scores to CSV if required
+    if save_scores:
+        save_scores_to_csv(scores, model_name)
 
     # Validate taxonomy
     validate_taxonomy()
@@ -240,7 +254,8 @@ if __name__ == "__main__":
                     min_sentence_length=min_sentence_length,
                     min_answers=min_answers,
                     taxonomy_dir=taxonomy_dir,
-                    model_name=model
+                    model_name=model,
+                    save_scores=args.save_scores
                 )
             except Exception as e:
                 logging.error(f"Error with model {model}: {e}")
@@ -259,5 +274,6 @@ if __name__ == "__main__":
             min_sentence_length=min_sentence_length,
             min_answers=min_answers,
             taxonomy_dir=taxonomy_dir,
-            model_name=model_name
+            model_name=model_name,
+            save_scores=args.save_scores
         )
