@@ -223,18 +223,41 @@ if __name__ == "__main__":
     taxonomy_dir = config['taxonomy_dir']
     model_name = config['model_name']
 
-    generate_yaml(
-        repo_url=repo_url,
-        commit_id=commit_id,
-        patterns=patterns,
-        yaml_path=yaml_path,
-        project_name=project_name,
-        questions=questions,
-        max_files=max_files,
-        max_lines=max_lines,
-        keywords=keywords,
-        min_sentence_length=min_sentence_length,
-        min_answers=min_answers,
-        taxonomy_dir=taxonomy_dir,
-        model_name=model_name
-    )
+    if config.get('optimize', False):
+        for model in config['model_list']:
+            logging.info(f"Running optimization with model: {model}")
+            try:
+                generate_yaml(
+                    repo_url=repo_url,
+                    commit_id=commit_id,
+                    patterns=patterns,
+                    yaml_path=yaml_path,
+                    project_name=project_name,
+                    questions=questions,
+                    max_files=max_files,
+                    max_lines=max_lines,
+                    keywords=keywords,
+                    min_sentence_length=min_sentence_length,
+                    min_answers=min_answers,
+                    taxonomy_dir=taxonomy_dir,
+                    model_name=model
+                )
+            except Exception as e:
+                logging.error(f"Error with model {model}: {e}")
+                continue
+    else:
+        generate_yaml(
+            repo_url=repo_url,
+            commit_id=commit_id,
+            patterns=patterns,
+            yaml_path=yaml_path,
+            project_name=project_name,
+            questions=questions,
+            max_files=max_files,
+            max_lines=max_lines,
+            keywords=keywords,
+            min_sentence_length=min_sentence_length,
+            min_answers=min_answers,
+            taxonomy_dir=taxonomy_dir,
+            model_name=model_name
+        )
