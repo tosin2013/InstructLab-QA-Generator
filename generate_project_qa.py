@@ -106,7 +106,7 @@ def validate_taxonomy():
 # Function to generate synthetic data
 def generate_synthetic_data():
     logging.info("Generating synthetic data...")
-    result = os.system("ilab generate --samples 5")
+    result = os.system("ilab generate --num-instructions 5")
     if result != 0:
         logging.error("Failed to generate synthetic data.")
         raise ValueError("Failed to generate synthetic data.")
@@ -163,7 +163,7 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
     validate_taxonomy()
 
     # Generate synthetic data
-    generate_synthetic_data()
+    #generate_synthetic_data()
 
 # Main script
 if __name__ == "__main__":
