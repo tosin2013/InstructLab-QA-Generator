@@ -214,9 +214,15 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
             validate_taxonomy()
         except ValueError as e:
             logging.error(f"Taxonomy validation failed: {e}")
-            raise
+            scores.append("failed")
     elif not os.path.exists(yaml_file_path):
         logging.info(f"Skipping taxonomy validation as {yaml_file_path} does not exist.")
+    else:
+        try:
+            validate_taxonomy()
+        except ValueError as e:
+            logging.error(f"Taxonomy validation failed: {e}")
+            scores.append("failed")
 
     # Generate synthetic data
     # generate_synthetic_data()
