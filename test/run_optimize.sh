@@ -33,6 +33,18 @@ print(config['model_list'][-1] if config['model_list'] else '')
         echo "No more models to test. Exiting..."
         break
     fi
-    # Remove the tested model from the model_list in config.yaml
-    remove_tested_model "$tested_model"
+    # Check if qna.yml exists before removing the tested model
+    yaml_file_path=$(python -c "
+import yaml
+with open('config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+taxonomy_path = os.path.join(config['taxonomy_dir'], 'knowledge', config['project_name'].lower(), 'overview')
+yaml_path = config['yaml_path']
+print(os.path.join(taxonomy_path, yaml_path))
+")
+    if [ -f "$yaml_file_path" ]; then
+        remove_tested_model "$tested_model"
+    else
+        echo "Skipping model removal as $yaml_file_path does not exist."
+    fi
 done

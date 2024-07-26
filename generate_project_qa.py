@@ -207,13 +207,16 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
     if save_scores:
         save_scores_to_csv(scores, model_name)
 
-    # Validate taxonomy if scores are not "failed"
-    if "failed" not in scores:
+    # Validate taxonomy if scores are not "failed" and qna.yml exists
+    yaml_file_path = os.path.join(taxonomy_path, yaml_path)
+    if "failed" not in scores and os.path.exists(yaml_file_path):
         try:
             validate_taxonomy()
         except ValueError as e:
             logging.error(f"Taxonomy validation failed: {e}")
             raise
+    elif not os.path.exists(yaml_file_path):
+        logging.info(f"Skipping taxonomy validation as {yaml_file_path} does not exist.")
 
     # Generate synthetic data
     # generate_synthetic_data()
