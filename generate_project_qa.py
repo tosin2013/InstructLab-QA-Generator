@@ -265,7 +265,7 @@ if __name__ == "__main__":
             config['model_list'].remove(model)
             with open(args.config_path, 'w') as config_file:
                 yaml.dump(config, config_file)
-        else:
+        if not config['model_list']:
             logging.info("No more models to test. Exiting...")
             break
     else:
