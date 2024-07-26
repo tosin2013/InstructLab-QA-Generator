@@ -155,7 +155,7 @@ def generate_synthetic_data():
 
 # Function to generate the YAML file
 def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name, save_scores):
-    logging.info("Starting YAML generation process")
+    logging.info(f"Starting YAML generation process with model: {model_name}")
     repo_content = read_git_repo(repo_url, commit_id, patterns, max_files)
     combined_content = ""
 
