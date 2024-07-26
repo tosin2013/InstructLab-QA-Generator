@@ -27,4 +27,7 @@ pip install --upgrade pip
 # Install the required Python packages
 pip install -r requirements.txt
 
+# Clone the InstructLab taxonomy repository
+git clone https://github.com/instructlab/taxonomy.git ~/instructlab/taxonomy
+
 echo "Setup complete. To activate the virtual environment, run 'source venv/bin/activate'."
