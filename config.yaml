@@ -39,10 +39,15 @@ questions:
   - "What are the main challenges faced by {project_name}?"
 chat:
   enabled: true
+  model: "deepset/roberta-base-squad2"
 generate:
   enabled: true
+  model: "deepset/roberta-base-squad2"
+  taxonomy_path: "~/instructlab/taxonomy"
+  taxonomy_base: "~/instructlab/taxonomy"
 serve:
   enabled: true
+  model_path: "~/instructlab/models/roberta-base-squad2"
 taxonomy_dir: "~/instructlab/taxonomy"
 model_name: "deepset/roberta-base-squad2" # Primary model to use for question answering
 optimize: false # Flag to indicate whether to run optimization

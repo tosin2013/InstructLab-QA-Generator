@@ -206,7 +206,11 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
         save_scores_to_csv(scores, model_name)
 
     # Validate taxonomy
-    validate_taxonomy()
+    try:
+        validate_taxonomy()
+    except ValueError as e:
+        logging.error(f"Taxonomy validation failed: {e}")
+        raise
 
     # Generate synthetic data
     # generate_synthetic_data()
