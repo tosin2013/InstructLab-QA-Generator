@@ -265,13 +265,27 @@ if __name__ == "__main__":
             config['model_list'].remove(model)
             with open(args.config_path, 'w') as config_file:
                 yaml.dump(config, config_file)
-        if not config['model_list']:
-            logging.info("No more models to test. Exiting...")
-            break
-        # Remove the tested model from the model_list in the config file
-        config['model_list'].remove(model)
-        with open(args.config_path, 'w') as config_file:
-            yaml.dump(config, config_file)
+        try:
+            model = config['model_list'][-1]
+            logging.info(f"Running optimization with model: {model}")
+            generate_yaml(
+                repo_url=repo_url,
+                commit_id=commit_id,
+                patterns=patterns,
+                yaml_path=yaml_path,
+                project_name=project_name,
+                questions=questions,
+                max_files=max_files,
+                model_name=model
+            )
+            save_scores_to_csv(scores, model_name=model)
+        except Exception as e:
+            logging.error(f"Error with model {model}: {e}")
+        finally:
+            # Remove the tested model from the model_list in the config file
+            config['model_list'].remove(model)
+            with open(args.config_path, 'w') as config_file:
+                yaml.dump(config, config_file)
     else:
         generate_yaml(
             repo_url=repo_url,
