@@ -173,35 +173,23 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
         logging.error(f"Failed to generate the minimum required number of answers ({min_answers}).")
         raise ValueError(f"Failed to generate the minimum required number of answers ({min_answers}).")
 
-    document_content = {
-        'created_by': f'{project_name.lower()}-team',
-        'domain': project_name.lower(),
-        'seed_examples': seed_examples,
-        'task_description': f'Details on {project_name.lower()} community project',
-        'document': {
-            'repo': repo_url,
-            'commit': commit_id,
-            'patterns': patterns
-        }
-    }
+    logging.info("Printing out the results of each answer and question")
+    for seed_example in seed_examples:
+        question = seed_example['question']
+        answer = seed_example['answer']
+        color = '\033[92m' if len(answer.split()) >= min_sentence_length else '\033[91m'
+        end_color = '\033[0m'
+        print(f"{color}Question: {question}\nAnswer: {answer}{end_color}\n")
 
-    # Define taxonomy path based on project name
-    taxonomy_path = os.path.join(taxonomy_dir, 'knowledge', project_name.lower(), 'overview')
-    os.makedirs(taxonomy_path, exist_ok=True)
-    yaml_file_path = os.path.join(taxonomy_path, yaml_path)
-
-    with open(yaml_file_path, 'w') as yaml_file:
-        yaml.dump(document_content, yaml_file, default_flow_style=False)
-    
-    logging.info(f"YAML file generated at: {yaml_file_path}")
-
-    # Save scores to CSV if required
-    if save_scores:
-        save_scores_to_csv(scores, model_name)
+    # Print out the results of each answer and question
+    for score in scores:
+        question = score['question']
+        answer = score['answer']
+        color = '\033[92m' if len(answer.split()) >= min_sentence_length else '\033[91m'
+        end_color = '\033[0m'
+        print(f"{color}Question: {question}\nAnswer: {answer}{end_color}\n")
 
 
-    # Generate synthetic data
-    # generate_synthetic_data()
 
 # Main script
 if __name__ == "__main__":
