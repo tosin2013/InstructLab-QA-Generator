@@ -37,6 +37,12 @@ questions:
   - "How is {project_name} maintained and updated?"
   - "What are the recommended best practices for using {project_name}?"
   - "What are the main challenges faced by {project_name}?"
+chat:
+  enabled: true
+generate:
+  enabled: true
+serve:
+  enabled: true
 taxonomy_dir: "~/instructlab/taxonomy"
 model_name: "deepset/roberta-base-squad2" # Primary model to use for question answering
 optimize: false # Flag to indicate whether to run optimization
