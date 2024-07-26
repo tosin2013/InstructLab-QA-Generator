@@ -268,7 +268,7 @@ if __name__ == "__main__":
         try:
             model = config['model_list'][-1]
             logging.info(f"Running optimization with model: {model}")
-            generate_yaml(
+            seed_examples, scores = generate_yaml(
                 repo_url=repo_url,
                 commit_id=commit_id,
                 patterns=patterns,
