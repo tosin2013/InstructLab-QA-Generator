@@ -22,6 +22,7 @@ while true; do
         echo "Error occurred during script execution. Exiting..."
         exit 1
     fi
+    # Get the last model from the model_list in config.yaml
     tested_model=$(python -c "
 import yaml
 with open('config.yaml', 'r') as file:
@@ -32,5 +33,6 @@ print(config['model_list'][-1] if config['model_list'] else '')
         echo "No more models to test. Exiting..."
         break
     fi
+    # Remove the tested model from the model_list in config.yaml
     remove_tested_model "$tested_model"
 done
