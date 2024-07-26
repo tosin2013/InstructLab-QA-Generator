@@ -268,6 +268,10 @@ if __name__ == "__main__":
         if not config['model_list']:
             logging.info("No more models to test. Exiting...")
             break
+        # Remove the tested model from the model_list in the config file
+        config['model_list'].remove(model)
+        with open(args.config_path, 'w') as config_file:
+            yaml.dump(config, config_file)
     else:
         generate_yaml(
             repo_url=repo_url,
