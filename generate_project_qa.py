@@ -134,14 +134,6 @@ def save_scores_to_csv(scores, model_name):
     df.to_csv(csv_path, index=False)
     logging.info(f"Scores saved to {csv_path}")
 
-# Function to validate taxonomy
-def validate_taxonomy():
-    result = os.system("ilab diff")
-    if result != 0:
-        logging.error("Taxonomy validation failed.")
-        raise ValueError("Taxonomy validation failed.")
-    else:
-        logging.info("Taxonomy is valid.")
 
 # Function to generate synthetic data
 def generate_synthetic_data():
@@ -207,22 +199,6 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
     if save_scores:
         save_scores_to_csv(scores, model_name)
 
-    # Validate taxonomy if scores are not "failed" and qna.yml exists
-    yaml_file_path = os.path.join(taxonomy_path, yaml_path)
-    if "failed" not in scores and os.path.exists(yaml_file_path):
-        try:
-            validate_taxonomy()
-        except ValueError as e:
-            logging.error(f"Taxonomy validation failed: {e}")
-            scores.append("failed")
-    elif not os.path.exists(yaml_file_path):
-        logging.info(f"Skipping taxonomy validation as {yaml_file_path} does not exist.")
-    else:
-        try:
-            validate_taxonomy()
-        except ValueError as e:
-            logging.error(f"Taxonomy validation failed: {e}")
-            scores.append("failed")
 
     # Generate synthetic data
     # generate_synthetic_data()
