@@ -238,7 +238,8 @@ if __name__ == "__main__":
     model_name = config['model_name']
 
     if config.get('optimize', False):
-        for model in config['model_list']:
+        while config['model_list']:
+            model = config['model_list'][-1]
             logging.info(f"Running optimization with model: {model}")
             try:
                 generate_yaml(
@@ -260,6 +261,13 @@ if __name__ == "__main__":
             except Exception as e:
                 logging.error(f"Error with model {model}: {e}")
                 continue
+            # Remove the tested model from the model_list in the config file
+            config['model_list'].remove(model)
+            with open(args.config_path, 'w') as config_file:
+                yaml.dump(config, config_file)
+        else:
+            logging.info("No more models to test. Exiting...")
+            break
     else:
         generate_yaml(
             repo_url=repo_url,
