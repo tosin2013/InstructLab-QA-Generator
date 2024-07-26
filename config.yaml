@@ -1,7 +1,7 @@
 project_name: InstructLab
 repo_url: https://github.com/instructlab/.github
 commit_id: 83d9852ad97c6b27d4b24508f7cfe7ff5dd04d0d
-patterns: 
+patterns:
   - README.md
   - "**/*.md"
   - "**/*.txt"
@@ -9,7 +9,7 @@ patterns:
 yaml_path: qna.yaml
 max_files: 100
 max_lines: 2000
-keywords: 
+keywords:
   - InstructLab
   - getting started
   - problems
@@ -26,25 +26,34 @@ questions:
   - "What problems is {project_name} aiming to solve?"
   - "Who created {project_name}?"
   - "How does {project_name} enable community collaboration?"
-  - "Is {project_name} an open source project?"
+  - "Is {project_name} an open-source project?"
   - "What is the tuning method for {project_name}?"
   - "What is the mission of {project_name}?"
+  - "What technologies or programming languages is {project_name} developed in?"
+  - "What are the key features of {project_name}?"
+  - "What are the current limitations of {project_name}?"
+  - "How can contributors improve {project_name}?"
+  - "What are the future goals for {project_name}?"
+  - "How is {project_name} maintained and updated?"
+  - "What are the recommended best practices for using {project_name}?"
 taxonomy_dir: "~/instructlab/taxonomy"
-model_name: "deepset/roberta-base-squad2"  # Primary model to use for question answering
-optimize: false  # Flag to indicate whether to run optimization
-model_list:  # List of models to use for optimization
+model_name: "deepset/roberta-base-squad2" # Primary model to use for question answering
+optimize: false # Flag to indicate whether to run optimization
+model_list: # List of models to use for optimization
   - "deepset/roberta-base-squad2"
   - "bert-large-uncased-whole-word-masking-finetuned-squad"
   - "distilbert-base-cased-distilled-squad"
   - "albert-base-v2"
   - "t5-base"
-
 # Available models:
 # - "deepset/roberta-base-squad2"
 # - "bert-large-uncased-whole-word-masking-finetuned-squad"
 # - "distilbert-base-cased-distilled-squad"
 # - "albert-base-v2"
 # - "t5-base"
-# 
+# - "ibm/labradorite-13b"
+# - "ibm/merlinite-7b"
+# - "ibm/re2g-reranker-trex"
+#
 # To find more models, visit https://huggingface.co/models
 # https://huggingface.co/models?pipeline_tag=question-answering
