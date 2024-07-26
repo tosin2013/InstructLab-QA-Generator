@@ -173,6 +173,8 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
 
     # Generate seed examples from the relevant sections
     seed_examples, scores = generate_qa_pairs(combined_sections, project_name, questions, min_sentence_length, model_name)
+    if not seed_examples:
+        scores.append("failed")
 
     # Check if the minimum number of answers is met
     if len(seed_examples) < min_answers:
@@ -205,12 +207,13 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
     if save_scores:
         save_scores_to_csv(scores, model_name)
 
-    # Validate taxonomy
-    try:
-        validate_taxonomy()
-    except ValueError as e:
-        logging.error(f"Taxonomy validation failed: {e}")
-        raise
+    # Validate taxonomy if scores are not "failed"
+    if "failed" not in scores:
+        try:
+            validate_taxonomy()
+        except ValueError as e:
+            logging.error(f"Taxonomy validation failed: {e}")
+            raise
 
     # Generate synthetic data
     # generate_synthetic_data()
