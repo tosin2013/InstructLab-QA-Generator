@@ -15,14 +15,8 @@ jobs:
       run: cp ./configs/config.yaml ./config.yaml
 
     - name: Make the script executable
-      run: chmod +x ./run_optimize.sh
+      run: chmod +x ./test/run_optimize.sh
 
     - name: Run the optimize script
-      run: ./run_optimize.sh
+      run: ./test/run_optimize.sh
 
-    #- name: Upload log file
-    #  if: always()
-    #  uses: actions/upload-artifact@v2
-    #  with:
-    #    name: log-file
-    #    path: path/to/logfile.log
