@@ -56,5 +56,6 @@ print(os.path.join(taxonomy_path, yaml_path))
         remove_tested_model "$tested_model"
     else
         echo "Skipping model removal as $yaml_file_path does not exist."
+        exit $?
     fi
 done
