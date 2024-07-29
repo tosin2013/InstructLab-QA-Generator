@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Navigate to the InstructLab directory
+cd ~/InstructLab-QA-Generator 
+
+# Activate the Python virtual environment
+source venv/bin/activate
+
+
 # Function to remove the tested model from the model_list in config.yaml
 remove_tested_model() {
     local model_to_remove=$1
