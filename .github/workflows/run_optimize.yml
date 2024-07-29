@@ -1,0 +1,33 @@
+name: Run Optimize Script
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-optimize:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Copy config.yaml from configs directory
+      run: cp ./configs/config.yaml ./config.yaml
+
+    - name: Make the script executable
+      run: chmod +x ./run_optimize.sh
+
+    - name: Run the optimize script
+      run: ./run_optimize.sh
+
+    #- name: Upload log file
+    #  if: always()
+    #  uses: actions/upload-artifact@v2
+    #  with:
+    #    name: log-file
+    #    path: path/to/logfile.log
