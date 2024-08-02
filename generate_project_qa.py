@@ -215,7 +215,7 @@ if __name__ == "__main__":
     min_answers = config['min_answers']
     questions = config['questions']
     taxonomy_dir = config['taxonomy_dir']
-    model_name = config['model_name']
+    model_list = config.get('model_list', [config['model_name']])
 
     if config.get('optimize', False):
         while config['model_list']:
