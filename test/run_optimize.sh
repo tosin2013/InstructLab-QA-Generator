@@ -6,19 +6,10 @@ cd ~/InstructLab-QA-Generator || { echo "Failed to navigate to InstructLab direc
 # Activate the Python virtual environment
 source venv/bin/activate || { echo "Failed to activate virtual environment. Exiting..."; exit 1; }
 
-# Function to remove the tested model from the model_list in config.yaml
+# Function to remove the tested model from the model_list in config.yaml using yq
 remove_tested_model() {
     local model_to_remove=$1
-    python -c "
-import yaml
-config_path='config.yaml'
-with open(config_path, 'r') as file:
-    config = yaml.safe_load(file)
-if '$model_to_remove' in config['model_list']:
-    config['model_list'].remove('$model_to_remove')
-with open(config_path, 'w') as file:
-    yaml.dump(config, file, default_flow_style=False)
-" || { echo "Failed to remove tested model. Exiting..."; exit 1; }
+    yq -i 'del(.model_list[] | select(. == "'"$model_to_remove"'"))' config.yaml || { echo "Failed to remove tested model. Exiting..."; exit 1; }
 }
 
 # Run the generate_project_qa.py script with optimization and save the results to a CSV file
@@ -29,13 +20,8 @@ while true; do
         exit 1
     fi
 
-    # Get the last model from the model_list in config.yaml
-    tested_model=$(python -c "
-import yaml
-with open('config.yaml', 'r') as file:
-    config = yaml.safe_load(file)
-print(config['model_list'][-1] if config['model_list'] else '')
-") || { echo "Failed to retrieve the last model. Exiting..."; exit 1; }
+    # Get the last model from the model_list in config.yaml using yq
+    tested_model=$(yq '.model_list[-1]' config.yaml) || { echo "Failed to retrieve the last model. Exiting..."; exit 1; }
 
     if [ -z "$tested_model" ]; then
         echo "No more models to test. Exiting..."
