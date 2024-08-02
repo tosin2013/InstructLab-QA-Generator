@@ -11,6 +11,14 @@ sudo yum update -y
 sudo yum install -y python3 python3-pip git gcc g++ gcc-c++
 sudo dnf groupinstall "Development Tools" -y
 
+# This function will check for the existence of the yq binary
+if ! yq -v  &> /dev/null
+then
+    VERSION=v4.44.2
+    BINARY=yq_linux_amd64
+    sudo wget https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY} -O /usr/bin/yq &&\
+    sudo chmod +x /usr/bin/yq
+fi
 
 # Set the CXX environment variable to the path of the C++ compiler
 #export CXX=g++
