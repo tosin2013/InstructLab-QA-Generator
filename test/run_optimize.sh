@@ -1,5 +1,20 @@
 #!/bin/bash
-set -x 
+set -e 
+
+# Function to print colored messages
+print_colored_message() {
+    local color=$1
+    local message=$2
+    case $color in
+        "red") echo -e "\e[31m$message\e[0m" ;;
+        "green") echo -e "\e[32m$message\e[0m" ;;
+        "yellow") echo -e "\e[33m$message\e[0m" ;;
+        "blue") echo -e "\e[34m$message\e[0m" ;;
+        "magenta") echo -e "\e[35m$message\e[0m" ;;
+        "cyan") echo -e "\e[36m$message\e[0m" ;;
+        *) echo "$message" ;;
+    esac
+}
 
 if [ -f /tmp/config.yaml ]; then
     cp /tmp/config.yaml ~/InstructLab-QA-Generator/config.yaml || { echo "Failed to copy config.yaml. Exiting..."; exit 1; }
@@ -22,17 +37,18 @@ remove_tested_model() {
 
 # Run the generate_project_qa.py script with optimization and save the results to a CSV file
 while true; do
+    print_colored_message "cyan" "Running optimization with the following model:"
+    tested_model=$(yq '.model_list[-1]' config.yaml) || { echo "Failed to retrieve the last model. Exiting..."; exit 1; }
+    print_colored_message "green" "$tested_model"
+
     python generate_project_qa.py --config_path config.yaml --save_scores
     if [ $? -ne 0 ]; then
-        echo "Error occurred during script execution. Exiting..."
+        print_colored_message "red" "Error occurred during script execution. Exiting..."
         exit 1
     fi
 
-    # Get the last model from the model_list in config.yaml using yq
-    tested_model=$(yq '.model_list[-1]' config.yaml) || { echo "Failed to retrieve the last model. Exiting..."; exit 1; }
-
     if [ -z "$tested_model" ]; then
-        echo "No more models to test. Exiting..."
+        print_colored_message "yellow" "No more models to test. Exiting..."
         break
     fi
 
