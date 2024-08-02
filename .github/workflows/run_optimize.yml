@@ -12,7 +12,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Copy config.yaml from configs directory
-      run: cp ./configs/config.yaml ./config.yaml
+      run: cp ./configs/config.yaml /tmp/config.yaml
 
     - name: Make the script executable
       run: chmod +x ./test/run_optimize.sh

@@ -1,4 +1,12 @@
 #!/bin/bash
+set -x 
+
+if [ -f /tmp/config.yaml ]; then
+    cp /tmp/config.yaml ~/InstructLab-QA-Generator/config.yaml || { echo "Failed to copy config.yaml. Exiting..."; exit 1; }
+else
+    echo "config.yaml not found. Exiting..."
+    exit 1
+fi
 
 # Navigate to the InstructLab directory
 cd ~/InstructLab-QA-Generator || { echo "Failed to navigate to InstructLab directory. Exiting..."; exit 1; }
