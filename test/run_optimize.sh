@@ -42,6 +42,8 @@ while true; do
     print_colored_message "green" "$tested_model"
 
     python generate_project_qa.py --config_path config.yaml --save_scores
+    yq config.yaml || { echo "Failed to run the script. Exiting..."; exit 1; }
+    sleep 5
     if [ $? -ne 0 ]; then
         print_colored_message "red" "Error occurred during script execution. Exiting..."
         exit 1
