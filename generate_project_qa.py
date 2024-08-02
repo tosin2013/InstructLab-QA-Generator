@@ -173,7 +173,7 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
         logging.error(f"Failed to generate the minimum required number of answers ({min_answers}).")
         raise ValueError(f"Failed to generate the minimum required number of answers ({min_answers}).")
 
-    logging.info("Printing out the results of each answer and question")
+    logging.info(f"Printing out the results of each answer and question using model: {model_name}")
     for seed_example in seed_examples:
         question = seed_example['question']
         answer = seed_example['answer']
