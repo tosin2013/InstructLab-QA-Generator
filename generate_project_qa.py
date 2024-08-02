@@ -243,28 +243,34 @@ if __name__ == "__main__":
                 continue
             # Remove the tested model from the model_list in the config file
             # Remove the tested model from the model_list in the config file
-            config['model_list'].remove(model)
+            config['model_list'] = [m for m in config['model_list'] if m != model]
             with open(args.config_path, 'w') as config_file:
                 yaml.dump(config, config_file)
-        try:
+        while config['model_list']:
             model = config['model_list'][-1]
             logging.info(f"Running optimization with model: {model}")
-            seed_examples, scores = generate_yaml(
-                repo_url=repo_url,
-                commit_id=commit_id,
-                patterns=patterns,
-                yaml_path=yaml_path,
-                project_name=project_name,
-                questions=questions,
-                max_files=max_files,
-                model_name=model
-            )
-            save_scores_to_csv(scores, model_name=model)
-        except Exception as e:
-            logging.error(f"Error with model {model}: {e}")
-        finally:
+            try:
+                generate_yaml(
+                    repo_url=repo_url,
+                    commit_id=commit_id,
+                    patterns=patterns,
+                    yaml_path=yaml_path,
+                    project_name=project_name,
+                    questions=questions,
+                    max_files=max_files,
+                    max_lines=max_lines,
+                    keywords=keywords,
+                    min_sentence_length=min_sentence_length,
+                    min_answers=min_answers,
+                    taxonomy_dir=taxonomy_dir,
+                    model_name=model,
+                    save_scores=args.save_scores
+                )
+            except Exception as e:
+                logging.error(f"Error with model {model}: {e}")
+                continue
             # Remove the tested model from the model_list in the config file
-            config['model_list'].remove(model)
+            config['model_list'] = [m for m in config['model_list'] if m != model]
             with open(args.config_path, 'w') as config_file:
                 yaml.dump(config, config_file)
     else:
