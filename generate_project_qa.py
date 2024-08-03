@@ -8,7 +8,9 @@ from nltk.tokenize import sent_tokenize, blankline_tokenize
 import argparse
 import pandas as pd
 import time
-from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
+from prometheus_client import CollectorRegistry, Gauge, generate_latest
+import requests
+from requests.auth import HTTPBasicAuth
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -146,14 +148,22 @@ def save_metrics_to_csv(metrics, metrics_file):
     df.to_csv(metrics_file, index=False)
     logging.info(f"Metrics saved to {metrics_file}")
 
-# Function to push metrics to Prometheus Pushgateway
-def push_metrics_to_gateway(metrics, job_name, pushgateway_url):
+# Function to push metrics to Prometheus Pushgateway with optional authentication
+def push_metrics_to_gateway(metrics, job_name, pushgateway_url, username=None, password=None):
     registry = CollectorRegistry()
     for key, value in metrics.items():
         if isinstance(value, (int, float)):
             gauge = Gauge(key, f'Description of {key}', registry=registry)
             gauge.set(value)
-    push_to_gateway(pushgateway_url, job=job_name, registry=registry)
+    data = generate_latest(registry)
+    
+    if username and password:
+        response = requests.post(pushgateway_url, data=data, auth=HTTPBasicAuth(username, password))
+    else:
+        response = requests.post(pushgateway_url, data=data)
+    
+    if response.status_code != 200:
+        logging.error(f"Failed to push metrics to Pushgateway: {response.text}")
 
 # Function to generate synthetic data
 def generate_synthetic_data():
@@ -166,7 +176,7 @@ def generate_synthetic_data():
         logging.info("Synthetic data generation completed.")
 
 # Function to generate the YAML file
-def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name, save_scores, pushgateway_url):
+def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name, save_scores, pushgateway_url, enable_prometheus, username, password):
     logging.info(f"Starting YAML generation process with model: {model_name}")
     
     metrics = {
@@ -241,9 +251,9 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
     metrics_file = f'metrics_{model_name.replace("/", "_")}.csv'
     save_metrics_to_csv(metrics, metrics_file)
 
-    # Push metrics to Prometheus Pushgateway
-    if pushgateway_url:
-        push_metrics_to_gateway(metrics, job_name='generate_yaml', pushgateway_url=pushgateway_url)
+    # Push metrics to Prometheus Pushgateway if enabled
+    if enable_prometheus and pushgateway_url:
+        push_metrics_to_gateway(metrics, job_name='generate_yaml', pushgateway_url=pushgateway_url, username=username, password=password)
 
 # Main script
 if __name__ == "__main__":
@@ -251,6 +261,9 @@ if __name__ == "__main__":
     parser.add_argument('--config_path', type=str, default='config.yaml', help='Path to the configuration file')
     parser.add_argument('--save_scores', action='store_true', help='Flag to save the scores of the models')
     parser.add_argument('--pushgateway_url', type=str, help='URL of the Prometheus Pushgateway')
+    parser.add_argument('--enable_prometheus', action='store_true', help='Flag to enable Prometheus metrics')
+    parser.add_argument('--username', type=str, help='Username for Prometheus Pushgateway authentication')
+    parser.add_argument('--password', type=str, help='Password for Prometheus Pushgateway authentication')
 
     args = parser.parse_args()
 
@@ -272,6 +285,9 @@ if __name__ == "__main__":
     taxonomy_dir = config['taxonomy_dir']
     model_list = config.get('model_list', [config['model_name']])
     pushgateway_url = config.get('pushgateway_url', args.pushgateway_url)
+    enable_prometheus = args.enable_prometheus
+    username = args.username
+    password = args.password
 
     if config.get('optimize', False):
         for model in model_list:
@@ -292,7 +308,10 @@ if __name__ == "__main__":
                     taxonomy_dir=taxonomy_dir,
                     model_name=model,
                     save_scores=args.save_scores,
-                    pushgateway_url=pushgateway_url
+                    pushgateway_url=pushgateway_url,
+                    enable_prometheus=enable_prometheus,
+                    username=username,
+                    password=password
                 )
             except Exception as e:
                 logging.error(f"Error with model {model}: {e}")
@@ -313,5 +332,8 @@ if __name__ == "__main__":
             taxonomy_dir=taxonomy_dir,
             model_name=model_list[0],
             save_scores=args.save_scores,
-            pushgateway_url=pushgateway_url
+            pushgateway_url=pushgateway_url,
+            enable_prometheus=enable_prometheus,
+            username=username,
+            password=password
         )

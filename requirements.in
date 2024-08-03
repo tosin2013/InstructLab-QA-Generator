@@ -6,3 +6,4 @@ pyyaml
 transformers
 nltk
 pip-tools
+prometheus_client
