@@ -55,9 +55,9 @@ optimize: true # Flag to indicate whether to run optimization
 model_list: # List of models to use for optimization
   - "deepset/roberta-base-squad2"
   - "bert-large-uncased-whole-word-masking-finetuned-squad"
-  - "distilbert-base-cased-distilled-squad"
-  - "albert-base-v2"
-  - "t5-base"
+  - "ibm/re2g-reranker-trex"
+  - "ibm/merlinite-7b"
+  - "ibm/labradorite-13b"
 # Available models:
 # - "deepset/roberta-base-squad2"
 # - "bert-large-uncased-whole-word-masking-finetuned-squad"
