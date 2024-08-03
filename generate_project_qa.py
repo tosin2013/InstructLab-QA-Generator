@@ -7,6 +7,8 @@ from transformers import pipeline
 from nltk.tokenize import sent_tokenize, blankline_tokenize
 import argparse
 import pandas as pd
+import time
+from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -24,8 +26,10 @@ def read_git_repo(repo_url, commit_id, patterns, max_files):
         os.system(f"rm -rf {repo_dir}")
 
     logging.info(f"Cloning repository {repo_url}")
+    start_time = time.time()
     repo = git.Repo.clone_from(repo_url, repo_dir)
     repo.git.checkout(commit_id)
+    clone_time = time.time() - start_time
     
     content = {}
     file_count = 0
@@ -36,14 +40,16 @@ def read_git_repo(repo_url, commit_id, patterns, max_files):
                 continue  # Skip directories
             if file_count >= max_files:
                 break
+            start_time = time.time()
             with open(file_path, 'r') as file:
                 content[file_path] = file.read()
+            read_time = time.time() - start_time
             file_count += 1
-            logging.info(f"Read file: {file_path}")
+            logging.info(f"Read file: {file_path} in {read_time:.2f} seconds")
         if file_count >= max_files:
             break
     
-    return content
+    return content, clone_time, file_count
 
 # Function to extract relevant sections based on keywords
 def extract_relevant_sections(text, keywords):
@@ -134,6 +140,20 @@ def save_scores_to_csv(scores, model_name):
     df.to_csv(csv_path, index=False)
     logging.info(f"Scores saved to {csv_path}")
 
+# Function to save metrics to CSV
+def save_metrics_to_csv(metrics, metrics_file):
+    df = pd.DataFrame([metrics])
+    df.to_csv(metrics_file, index=False)
+    logging.info(f"Metrics saved to {metrics_file}")
+
+# Function to push metrics to Prometheus Pushgateway
+def push_metrics_to_gateway(metrics, job_name, pushgateway_url):
+    registry = CollectorRegistry()
+    for key, value in metrics.items():
+        if isinstance(value, (int, float)):
+            gauge = Gauge(key, f'Description of {key}', registry=registry)
+            gauge.set(value)
+    push_to_gateway(pushgateway_url, job=job_name, registry=registry)
 
 # Function to generate synthetic data
 def generate_synthetic_data():
@@ -146,25 +166,47 @@ def generate_synthetic_data():
         logging.info("Synthetic data generation completed.")
 
 # Function to generate the YAML file
-def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name, save_scores):
+def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name, save_scores, pushgateway_url):
     logging.info(f"Starting YAML generation process with model: {model_name}")
-    repo_content = read_git_repo(repo_url, commit_id, patterns, max_files)
+    
+    metrics = {
+        'repo_url': repo_url,
+        'commit_id': commit_id,
+        'model_name': model_name,
+        'start_time': time.time(),
+    }
+
+    repo_content, clone_time, file_count = read_git_repo(repo_url, commit_id, patterns, max_files)
+    metrics.update({
+        'clone_time': clone_time,
+        'file_count': file_count,
+    })
+    
     combined_content = ""
 
+    start_time = time.time()
     for file_path, file_content in repo_content.items():
         lines = file_content.split('\n')
         combined_content += "\n".join(lines[:max_lines]) + "\n"
         if len(combined_content.split('\n')) >= max_lines:
             break
+    metrics['file_read_time'] = time.time() - start_time
 
     # Extract relevant sections based on keywords
+    start_time = time.time()
     relevant_sections = extract_relevant_sections(combined_content, keywords)
+    metrics['section_extraction_time'] = time.time() - start_time
+    metrics['relevant_section_count'] = len(relevant_sections)
 
     # Combine relevant sections for better context
     combined_sections = combine_relevant_sections(relevant_sections)
 
     # Generate seed examples from the relevant sections
+    start_time = time.time()
     seed_examples, scores = generate_qa_pairs(combined_sections, project_name, questions, min_sentence_length, model_name)
+    metrics['qa_generation_time'] = time.time() - start_time
+    metrics['qa_count'] = len(seed_examples)
+
     if not seed_examples:
         scores.append("failed")
 
@@ -189,13 +231,26 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
         end_color = '\033[0m'
         print(f"{color}Question: {question}\nAnswer: {answer}{end_color}\n")
 
+    if save_scores:
+        save_scores_to_csv(scores, model_name)
 
+    metrics['end_time'] = time.time()
+    metrics['total_time'] = metrics['end_time'] - metrics['start_time']
+    
+    # Save metrics to CSV
+    metrics_file = f'metrics_{model_name.replace("/", "_")}.csv'
+    save_metrics_to_csv(metrics, metrics_file)
+
+    # Push metrics to Prometheus Pushgateway
+    if pushgateway_url:
+        push_metrics_to_gateway(metrics, job_name='generate_yaml', pushgateway_url=pushgateway_url)
 
 # Main script
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate QnA YAML from a Git repository.")
     parser.add_argument('--config_path', type=str, default='config.yaml', help='Path to the configuration file')
     parser.add_argument('--save_scores', action='store_true', help='Flag to save the scores of the models')
+    parser.add_argument('--pushgateway_url', type=str, help='URL of the Prometheus Pushgateway')
 
     args = parser.parse_args()
 
@@ -216,6 +271,7 @@ if __name__ == "__main__":
     questions = config['questions']
     taxonomy_dir = config['taxonomy_dir']
     model_list = config.get('model_list', [config['model_name']])
+    pushgateway_url = config.get('pushgateway_url', args.pushgateway_url)
 
     if config.get('optimize', False):
         for model in model_list:
@@ -235,7 +291,8 @@ if __name__ == "__main__":
                     min_answers=min_answers,
                     taxonomy_dir=taxonomy_dir,
                     model_name=model,
-                    save_scores=args.save_scores
+                    save_scores=args.save_scores,
+                    pushgateway_url=pushgateway_url
                 )
             except Exception as e:
                 logging.error(f"Error with model {model}: {e}")
@@ -255,22 +312,6 @@ if __name__ == "__main__":
             min_answers=min_answers,
             taxonomy_dir=taxonomy_dir,
             model_name=model_list[0],
-            save_scores=args.save_scores
-        )
-    else:
-        generate_yaml(
-            repo_url=repo_url,
-            commit_id=commit_id,
-            patterns=patterns,
-            yaml_path=yaml_path,
-            project_name=project_name,
-            questions=questions,
-            max_files=max_files,
-            max_lines=max_lines,
-            keywords=keywords,
-            min_sentence_length=min_sentence_length,
-            min_answers=min_answers,
-            taxonomy_dir=taxonomy_dir,
-            model_name=model_name,
-            save_scores=args.save_scores
+            save_scores=args.save_scores,
+            pushgateway_url=pushgateway_url
         )

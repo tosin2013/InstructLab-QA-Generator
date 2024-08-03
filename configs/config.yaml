@@ -49,6 +49,7 @@ serve:
   enabled: true
   model_path: "~/instructlab/models/roberta-base-squad2"
 taxonomy_dir: "~/instructlab/taxonomy"
+pushgateway_url: "http://your-pushgateway-url:9091"
 model_name: "deepset/roberta-base-squad2" # Primary model to use for question answering
 optimize: true # Flag to indicate whether to run optimization
 model_list: # List of models to use for optimization
