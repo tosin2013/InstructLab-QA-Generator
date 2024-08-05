@@ -8,7 +8,7 @@ from nltk.tokenize import sent_tokenize, blankline_tokenize
 import argparse
 import pandas as pd
 import time
-from prometheus_client import CollectorRegistry, Gauge, generate_latest
+from prometheus_client import CollectorRegistry, Gauge, generate_latest, Info  # Import Info
 import requests
 from requests.auth import HTTPBasicAuth
 
@@ -135,6 +135,7 @@ def generate_qa_pairs(sections, project_name, questions, min_sentence_length, mo
 
     return seed_examples, scores
 
+
 # Function to save scores to CSV
 def save_scores_to_csv(scores, model_name):
     df = pd.DataFrame(scores)
@@ -147,36 +148,77 @@ def save_metrics_to_csv(metrics, metrics_file):
     df = pd.DataFrame([metrics])
     df.to_csv(metrics_file, index=False)
     logging.info(f"Metrics saved to {metrics_file}")
-
+    
 # Function to push metrics to Prometheus Pushgateway with optional authentication
-def push_metrics_to_gateway(metrics, job_name, pushgateway_url, username=None, password=None):
+def push_metrics_to_gateway(metrics, job_name, pushgateway_url, instance, username=None, password=None):
     registry = CollectorRegistry()
     for key, value in metrics.items():
         if isinstance(value, (int, float)):
-            gauge = Gauge(key, f'Description of {key}', registry=registry)
-            gauge.set(value)
+            gauge = Gauge(key, f'Description of {key}', ['instance'], registry=registry)
+            gauge.labels(instance=instance).set(value)
     data = generate_latest(registry)
     
+    # Replace slashes in instance with hyphens
+    sanitized_instance = instance.replace("/", "-")
+    full_url = f"{pushgateway_url}/metrics/job/{job_name}/instance/{sanitized_instance}"
+    
     if username and password:
-        response = requests.post(pushgateway_url, data=data, auth=HTTPBasicAuth(username, password))
+        response = requests.post(full_url, data=data, auth=HTTPBasicAuth(username, password))
     else:
-        response = requests.post(pushgateway_url, data=data)
+        response = requests.post(full_url, data=data)
     
     if response.status_code != 200:
-        logging.error(f"Failed to push metrics to Pushgateway: {response.text}")
-
-# Function to generate synthetic data
-def generate_synthetic_data():
-    logging.info("Generating synthetic data...")
-    result = os.system("ilab generate --num-instructions 5")
-    if result != 0:
-        logging.error("Failed to generate synthetic data.")
-        raise ValueError("Failed to generate synthetic data.")
+        logging.error(f"Failed to push metrics to Pushgateway. URL: {full_url}, Status Code: {response.status_code}, Response: {response.text}")
     else:
-        logging.info("Synthetic data generation completed.")
+        logging.info(f"Metrics successfully pushed to Pushgateway. URL: {full_url}, Key: {key}")
+
+# Function to push Q&A metadata to Prometheus Pushgateway with optional authentication
+def push_qa_metadata_to_gateway(seed_examples, job_name, pushgateway_url, instance, username=None, password=None):
+    registry = CollectorRegistry()
+    
+    # Create gauges for metadata
+    question_count = Gauge('question_count', 'Total number of questions', ['instance'], registry=registry)
+    answer_count = Gauge('answer_count', 'Total number of answers', ['instance'], registry=registry)
+    longest_answer_length = Gauge('longest_answer_length', 'Length of the longest answer', ['instance'], registry=registry)
+    shortest_answer_length = Gauge('shortest_answer_length', 'Length of the shortest answer', ['instance'], registry=registry)
+    
+    question_count.labels(instance=instance).set(len(seed_examples))
+    answer_lengths = [len(example['answer'].split()) for example in seed_examples]
+    answer_count.labels(instance=instance).set(len(answer_lengths))
+    
+    if answer_lengths:
+        longest_answer_length.labels(instance=instance).set(max(answer_lengths))
+        shortest_answer_length.labels(instance=instance).set(min(answer_lengths))
+    
+    # Info for detailed Q&A pairs (This is more for demonstration, typically Prometheus is not used for such detailed text data)
+    qa_info = Info('qa_pairs', 'Question and Answer pairs', registry=registry)
+    qa_info.info({f'qa_pair_{i}': f"Q: {example['question']} A: {example['answer']}" for i, example in enumerate(seed_examples)})
+
+    data = generate_latest(registry)
+    
+    # Replace slashes in instance with hyphens
+    sanitized_instance = instance.replace("/", "-")
+    full_url = f"{pushgateway_url}/metrics/job/{job_name}/instance/{sanitized_instance}"
+    
+    if username and password:
+        response = requests.post(full_url, data=data, auth=HTTPBasicAuth(username, password))
+    else:
+        response = requests.post(full_url, data=data)
+    
+    if response.status_code != 200:
+        logging.error(f"Failed to push Q&A metadata to Pushgateway. URL: {full_url}, Status Code: {response.status_code}, Response: {response.text}")
+    else:
+        logging.info(f"Q&A metadata successfully pushed to Pushgateway. URL: {full_url}")
+
+# Function to save Q&A pairs to a YAML file
+def save_qna_to_yaml(seed_examples, model_name):
+    yaml_path = f'{model_name.replace("/", "_")}-qna.yml'
+    with open(yaml_path, 'w') as file:
+        yaml.dump(seed_examples, file, default_flow_style=False)
+    logging.info(f"Q&A pairs saved to {yaml_path}")
 
 # Function to generate the YAML file
-def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name, save_scores, pushgateway_url, enable_prometheus, username, password):
+def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questions, max_files, max_lines, keywords, min_sentence_length, min_answers, taxonomy_dir, model_name, save_scores, pushgateway_url, enable_prometheus, username, password, job_name):
     logging.info(f"Starting YAML generation process with model: {model_name}")
     
     metrics = {
@@ -202,16 +244,13 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
             break
     metrics['file_read_time'] = time.time() - start_time
 
-    # Extract relevant sections based on keywords
     start_time = time.time()
     relevant_sections = extract_relevant_sections(combined_content, keywords)
     metrics['section_extraction_time'] = time.time() - start_time
     metrics['relevant_section_count'] = len(relevant_sections)
 
-    # Combine relevant sections for better context
     combined_sections = combine_relevant_sections(relevant_sections)
 
-    # Generate seed examples from the relevant sections
     start_time = time.time()
     seed_examples, scores = generate_qa_pairs(combined_sections, project_name, questions, min_sentence_length, model_name)
     metrics['qa_generation_time'] = time.time() - start_time
@@ -220,7 +259,6 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
     if not seed_examples:
         scores.append("failed")
 
-    # Check if the minimum number of answers is met
     if len(seed_examples) < min_answers:
         logging.error(f"Failed to generate the minimum required number of answers ({min_answers}).")
         raise ValueError(f"Failed to generate the minimum required number of answers ({min_answers}).")
@@ -233,27 +271,20 @@ def generate_yaml(repo_url, commit_id, patterns, yaml_path, project_name, questi
         end_color = '\033[0m'
         print(f"{color}Question: {question}\nAnswer: {answer}{end_color}\n")
 
-    # Print out the results of each answer and question
-    for score in scores:
-        question = score['question']
-        answer = score['answer']
-        color = '\033[92m' if len(answer.split()) >= min_sentence_length else '\033[91m'
-        end_color = '\033[0m'
-        print(f"{color}Question: {question}\nAnswer: {answer}{end_color}\n")
-
     if save_scores:
         save_scores_to_csv(scores, model_name)
+
+    save_qna_to_yaml(seed_examples, model_name)
 
     metrics['end_time'] = time.time()
     metrics['total_time'] = metrics['end_time'] - metrics['start_time']
     
-    # Save metrics to CSV
     metrics_file = f'metrics_{model_name.replace("/", "_")}.csv'
     save_metrics_to_csv(metrics, metrics_file)
 
-    # Push metrics to Prometheus Pushgateway if enabled
     if enable_prometheus and pushgateway_url:
-        push_metrics_to_gateway(metrics, job_name='generate_yaml', pushgateway_url=pushgateway_url, username=username, password=password)
+        push_metrics_to_gateway(metrics, job_name=job_name, pushgateway_url=pushgateway_url, instance=model_name, username=username, password=password)
+        push_qa_metadata_to_gateway(seed_examples, job_name=job_name, pushgateway_url=pushgateway_url, instance=model_name, username=username, password=password)
 
 # Main script
 if __name__ == "__main__":
@@ -267,10 +298,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Read configuration
     config = read_config(args.config_path)
 
-    # Extract parameters from the configuration
     project_name = config['project_name']
     repo_url = config['repo_url']
     commit_id = config['commit_id']
@@ -288,6 +317,7 @@ if __name__ == "__main__":
     enable_prometheus = args.enable_prometheus
     username = args.username
     password = args.password
+    job_name = project_name  # Use project name or any unique identifier as job name
 
     if config.get('optimize', False):
         for model in model_list:
@@ -311,7 +341,8 @@ if __name__ == "__main__":
                     pushgateway_url=pushgateway_url,
                     enable_prometheus=enable_prometheus,
                     username=username,
-                    password=password
+                    password=password,
+                    job_name=job_name
                 )
             except Exception as e:
                 logging.error(f"Error with model {model}: {e}")
@@ -335,5 +366,6 @@ if __name__ == "__main__":
             pushgateway_url=pushgateway_url,
             enable_prometheus=enable_prometheus,
             username=username,
-            password=password
+            password=password,
+            job_name=job_name
         )
