@@ -21,9 +21,8 @@ def read_config(config_path):
         config = yaml.safe_load(file)
     return config
 
-# Function to read the Git repository
 def read_git_repo(repo_url, commit_id, patterns, max_files):
-    repo_dir = "/tmp/repo"  # Temporary directory to clone the repo
+    repo_dir = "/tmp/repo"
     if os.path.exists(repo_dir):
         os.system(f"rm -rf {repo_dir}")
 
@@ -39,15 +38,19 @@ def read_git_repo(repo_url, commit_id, patterns, max_files):
         file_paths = glob.glob(os.path.join(repo_dir, pattern), recursive=True)
         for file_path in file_paths:
             if os.path.isdir(file_path):
-                continue  # Skip directories
+                continue
             if file_count >= max_files:
                 break
             start_time = time.time()
-            with open(file_path, 'r') as file:
-                content[file_path] = file.read()
-            read_time = time.time() - start_time
-            file_count += 1
-            logging.info(f"Read file: {file_path} in {read_time:.2f} seconds")
+            try:
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    content[file_path] = file.read()
+                read_time = time.time() - start_time
+                file_count += 1
+                logging.info(f"Read file: {file_path} in {read_time:.2f} seconds")
+            except UnicodeDecodeError as e:
+                logging.error(f"Error reading file {file_path}: {e}")
+                continue
         if file_count >= max_files:
             break
     
