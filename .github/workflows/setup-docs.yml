@@ -1,0 +1,95 @@
+name: Setup and Deploy Documentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      setup_jekyll_docs:
+        description: 'Setup Jekyll Docs'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
+  push:
+    branches: ["main"]
+    paths:
+      - 'docs/**'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  setup-and-build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Ruby
+      uses: ruby/setup-ruby@8575951200e472d5f2d95c625da0c7bec8217c42
+      with:
+        ruby-version: '3.1'
+        bundler-cache: true
+        cache-version: 0
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential zlib1g-dev
+    - name: Setup Jekyll Docs
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.setup_jekyll_docs == 'true'
+      env:
+        GITHUB_USERNAME: ${{ github.repository_owner }}
+        GITHUB_REPO: ${{ github.event.repository.name }}
+        CATEGORIES: "deployment,development,configuration,troubleshooting"
+        SITE_TITLE: "${{ github.event.repository.name }}"
+        SITE_EMAIL: "{{ secrets.SITE_EMAIL }}"
+        SITE_DESCRIPTION: "Documentation for ${{ github.event.repository.name }}"
+        SITE_BASEURL: "/docs"
+        SITE_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+        TWITTER_USERNAME: "tech0827"
+      run: |
+        chmod +x setup_jekyll_docs.sh
+        ./setup_jekyll_docs.sh
+    - name: Commit changes
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.setup_jekyll_docs == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs
+        git commit -m "Setup Jekyll docs structure" || echo "No changes to commit"
+        git push
+    - name: Setup Pages
+      id: pages
+      uses: actions/configure-pages@v4
+
+    - name: Build with Jekyll
+      run: |
+        cd docs
+        bundle install
+        bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}" -d ../../_site
+      env:
+        JEKYLL_ENV: production
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: /home/runner/work/${{ github.event.repository.name }}/_site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: setup-and-build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

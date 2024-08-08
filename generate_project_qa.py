@@ -3,14 +3,14 @@ import yaml
 import os
 import glob
 import logging
-from transformers import pipeline
-from nltk.tokenize import sent_tokenize, blankline_tokenize
+from sentence_transformers import SentenceTransformer, util
 import argparse
 import pandas as pd
 import time
-from prometheus_client import CollectorRegistry, Gauge, generate_latest, Info  # Import Info
+from prometheus_client import CollectorRegistry, Gauge, generate_latest, Info
 import requests
 from requests.auth import HTTPBasicAuth
+from nltk.tokenize import sent_tokenize, blankline_tokenize  # Ensure this is imported
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,6 +21,14 @@ def read_config(config_path):
         config = yaml.safe_load(file)
     return config
 
+# Function to determine if a file is binary
+def is_binary_file(file_path):
+    with open(file_path, 'rb') as file:
+        chunk = file.read(1024)
+    text_characters = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)))
+    return bool(chunk.translate(None, text_characters))
+
+# Function to read the Git repository
 def read_git_repo(repo_url, commit_id, patterns, max_files):
     repo_dir = "/tmp/repo"
     if os.path.exists(repo_dir):
@@ -41,6 +49,9 @@ def read_git_repo(repo_url, commit_id, patterns, max_files):
                 continue
             if file_count >= max_files:
                 break
+            if is_binary_file(file_path):
+                logging.warning(f"Skipping binary file: {file_path}")
+                continue
             start_time = time.time()
             try:
                 with open(file_path, 'r', encoding='utf-8') as file:
@@ -73,7 +84,7 @@ def combine_relevant_sections(sections):
     combined_sections = []
     current_section = ""
     for section in sections:
-        if len(current_section) + len(section) < 4096:  # Increase token limit for better context
+        if len(current_section) + len(section) < 4096:
             current_section += " " + section
         else:
             combined_sections.append(current_section.strip())
@@ -84,60 +95,33 @@ def combine_relevant_sections(sections):
 
 # Function to generate questions and answers using specified models
 def generate_qa_pairs(sections, project_name, questions, min_sentence_length, model_name):
-    """
-    Generate question-answer pairs from the provided text sections.
-
-    Args:
-        sections (list of str): List of text sections to use as context for generating Q&A pairs.
-        project_name (str): Name of the project for which Q&A pairs are being generated.
-        questions (list of str): List of question templates to generate Q&A pairs.
-        min_sentence_length (int): Minimum length of the answer in terms of number of words.
-        model_name (str): The Huggingface model to use for question answering.
-
-    Returns:
-        list of dict: List of dictionaries containing question and answer pairs.
-    """
-    
-    # Initialize the question-answering pipeline with the specified model
-    question_answerer = pipeline("question-answering", model=model_name)
-
-    # List to hold the generated question-answer pairs
+    model = SentenceTransformer(model_name)
     seed_examples = []
     scores = []
-    
-    # Combine all sections to provide a richer context
     context = " ".join(sections)
 
-    # Iterate through each question template
+    # Embed the context once
+    context_sentences = sent_tokenize(context)
+    context_embeddings = model.encode(context_sentences, convert_to_tensor=True)
+
     for question_template in questions:
-        # Format the question with the project name
         question = question_template.format(project_name=project_name)
-        best_answer = ""
-        best_score = 0.0
+        question_embedding = model.encode(question, convert_to_tensor=True)
+        
+        # Compute cosine similarity between the question and context sentences
+        cosine_scores = util.pytorch_cos_sim(question_embedding, context_embeddings)[0]
+        best_score, best_idx = cosine_scores.max().item(), cosine_scores.argmax().item()
+        
+        best_answer = context_sentences[best_idx]
+        logging.info(f"Processing question '{question}' with best answer: '{best_answer}' and score: {best_score}")
 
-        try:
-            # Get the answer from the pipeline
-            answer = question_answerer(question=question, context=context)
-            logging.info(f"Processing question '{question}' with context length {len(context)}")
-            logging.info(f"Answer: {answer['answer']} with score {answer['score']}")
-
-            # Update the best answer if it meets the criteria
-            if answer['score'] > best_score and len(answer['answer'].split()) >= min_sentence_length:
-                best_answer = answer['answer']
-                best_score = answer['score']
-        except Exception as e:
-            logging.error(f"Error processing question '{question}' with context '{context}': {e}")
-            continue
-
-        # Add the question-answer pair to the list if the answer is valid
-        if best_answer.strip() and len(best_answer.split()) >= min_sentence_length:
+        if len(best_answer.split()) >= min_sentence_length:
             seed_examples.append({'question': question, 'answer': best_answer.strip()})
             scores.append({'question': question, 'answer': best_answer.strip(), 'score': best_score})
         else:
             logging.warning(f"Skipped question '{question}' due to insufficient answer length. Answer: '{best_answer}', Length: {len(best_answer.split())}")
 
     return seed_examples, scores
-
 
 # Function to save scores to CSV
 def save_scores_to_csv(scores, model_name):
@@ -151,7 +135,7 @@ def save_metrics_to_csv(metrics, metrics_file):
     df = pd.DataFrame([metrics])
     df.to_csv(metrics_file, index=False)
     logging.info(f"Metrics saved to {metrics_file}")
-    
+
 # Function to push metrics to Prometheus Pushgateway with optional authentication
 def push_metrics_to_gateway(metrics, job_name, pushgateway_url, instance, username=None, password=None):
     registry = CollectorRegistry()
@@ -161,7 +145,6 @@ def push_metrics_to_gateway(metrics, job_name, pushgateway_url, instance, userna
             gauge.labels(instance=instance).set(value)
     data = generate_latest(registry)
     
-    # Replace slashes in instance with hyphens
     sanitized_instance = instance.replace("/", "-")
     full_url = f"{pushgateway_url}/metrics/job/{job_name}/instance/{sanitized_instance}"
     
@@ -173,13 +156,12 @@ def push_metrics_to_gateway(metrics, job_name, pushgateway_url, instance, userna
     if response.status_code != 200:
         logging.error(f"Failed to push metrics to Pushgateway. URL: {full_url}, Status Code: {response.status_code}, Response: {response.text}")
     else:
-        logging.info(f"Metrics successfully pushed to Pushgateway. URL: {full_url}, Key: {key}")
+        logging.info(f"Metrics successfully pushed to Pushgateway. URL: {full_url}")
 
 # Function to push Q&A metadata to Prometheus Pushgateway with optional authentication
 def push_qa_metadata_to_gateway(seed_examples, job_name, pushgateway_url, instance, username=None, password=None):
     registry = CollectorRegistry()
     
-    # Create gauges for metadata
     question_count = Gauge('question_count', 'Total number of questions', ['instance'], registry=registry)
     answer_count = Gauge('answer_count', 'Total number of answers', ['instance'], registry=registry)
     longest_answer_length = Gauge('longest_answer_length', 'Length of the longest answer', ['instance'], registry=registry)
@@ -193,13 +175,11 @@ def push_qa_metadata_to_gateway(seed_examples, job_name, pushgateway_url, instan
         longest_answer_length.labels(instance=instance).set(max(answer_lengths))
         shortest_answer_length.labels(instance=instance).set(min(answer_lengths))
     
-    # Info for detailed Q&A pairs (This is more for demonstration, typically Prometheus is not used for such detailed text data)
     qa_info = Info('qa_pairs', 'Question and Answer pairs', registry=registry)
     qa_info.info({f'qa_pair_{i}': f"Q: {example['question']} A: {example['answer']}" for i, example in enumerate(seed_examples)})
 
     data = generate_latest(registry)
     
-    # Replace slashes in instance with hyphens
     sanitized_instance = instance.replace("/", "-")
     full_url = f"{pushgateway_url}/metrics/job/{job_name}/instance/{sanitized_instance}"
     
@@ -320,7 +300,7 @@ if __name__ == "__main__":
     enable_prometheus = args.enable_prometheus
     username = args.username
     password = args.password
-    job_name = project_name  # Use project name or any unique identifier as job name
+    job_name = project_name
 
     if config.get('optimize', False):
         for model in model_list:
