@@ -151,7 +151,7 @@ This is the main page for the ${category} category. Add your ${category}-related
 
 EOF
 
-  echo "- [${category}](${category}) >> index.markdown
+  echo "- [${category}](${category})" >> index.markdown
 
   # Create a sample sub-page for each category
   cat << EOF > "${category}/sample-${category}-page.md"
