@@ -1,5 +1,4 @@
-# InstructLab-QA-Generator
-
+# InstructLab-QA-Generator - Need to architect
 ## Purpose
 This project automates the generation of QA pairs from a Git repository, aiming to facilitate the creation of models for OpenShift AI or Hugging Face. The generated QA pairs help in understanding and documenting the project better.
 
